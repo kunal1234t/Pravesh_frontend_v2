@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:pravesh_screen/config/app_config.dart';
 import 'package:pravesh_screen/student/QRGenerator.dart';
 import 'package:pravesh_screen/app_colors_provider.dart';
 import 'package:pravesh_screen/cryptoUtils.dart';
@@ -34,39 +35,52 @@ class _LeaveFormHomePageState extends State<LeaveFormHomePage> {
   final _emergencyContactController = TextEditingController();
 
   DateTime? _selectedDate;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    isWithinRadius();
+    // Remove location check on init - only check when form is submitted
   }
 
-  Future<bool> isWithinRadius() async {
-    if (!await Geolocator.isLocationServiceEnabled()) {
-      _showErrorDialog(
-          'Location services are disabled. Please enable location services to continue.');
-      return false;
-    }
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    _destinationController.dispose();
+    _returnDateController.dispose();
+    _emergencyContactController.dispose();
+    super.dispose();
+  }
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
+  Future<bool> _isWithinRadius() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
         _showErrorDialog(
-            'Location permission denied. Please grant location permission to continue.');
+            'Location services are disabled. Please enable location services to continue.');
         return false;
       }
-    }
 
-    if (permission == LocationPermission.deniedForever) {
-      _showErrorDialog(
-          'Location permission is permanently denied. Please enable it in settings.');
-      return false;
-    }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showErrorDialog(
+              'Location permission denied. Please grant location permission to continue.');
+          return false;
+        }
+      }
 
-    try {
-      Position position = await Geolocator.getCurrentPosition();
-      double distance = Geolocator.distanceBetween(
+      if (permission == LocationPermission.deniedForever) {
+        _showErrorDialog(
+            'Location permission is permanently denied. Please enable it in settings.');
+        return false;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      final distance = Geolocator.distanceBetween(
         position.latitude,
         position.longitude,
         targetLatitude,
@@ -81,20 +95,20 @@ class _LeaveFormHomePageState extends State<LeaveFormHomePage> {
 
       return true;
     } catch (e) {
-      _showErrorDialog('Error getting location: $e');
+      _showErrorDialog('Unable to determine your location. Please try again.');
       return false;
     }
   }
 
   Future<void> _selectDate(BuildContext context) async {
     final colors = appColors(context);
-    final DateTime now = DateTime.now();
-    final DateTime initialDate = _selectedDate ?? now;
+    final now = DateTime.now();
+    final initialDate = _selectedDate ?? now;
 
-    final DateTime firstDate = now;
-    final DateTime lastDate = DateTime(now.year + 1);
+    final firstDate = now;
+    final lastDate = DateTime(now.year + 1);
 
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
       firstDate: firstDate,
@@ -125,8 +139,7 @@ class _LeaveFormHomePageState extends State<LeaveFormHomePage> {
       },
     );
 
-    if (picked != null && picked != _selectedDate) {
-      if (!mounted) return;
+    if (picked != null && picked != _selectedDate && mounted) {
       setState(() {
         _selectedDate = picked;
         _returnDateController.text = DateFormat('dd-MM-yyyy').format(picked);
@@ -134,13 +147,91 @@ class _LeaveFormHomePageState extends State<LeaveFormHomePage> {
     }
   }
 
-  @override
-  void dispose() {
-    _reasonController.dispose();
-    _destinationController.dispose();
-    _returnDateController.dispose();
-    _emergencyContactController.dispose();
-    super.dispose();
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedDate == null) {
+      _showErrorDialog('Please select a return date.');
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final withinRadius = await _isWithinRadius();
+      if (!withinRadius) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // TODO: Replace hardcoded qrData with actual user data from auth service
+      final encryptedData = CryptoUtils.encryptData(
+        data: {
+          ...qrData,
+          "UniqueID": const Uuid().v4(),
+          "Reason": _reasonController.text.trim(),
+          "Destination": _destinationController.text.trim(),
+          "ReturnDate": _returnDateController.text.trim(),
+          "EmergencyContact": _emergencyContactController.text.trim(),
+          "Timestamp": DateTime.now().toIso8601String(),
+        },
+        secret: AppConfig.qrEncryptionSecret, // Use your config value here
+      );
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QRCodeGenerator(qrData: encryptedData),
+        ),
+      );
+    } catch (e) {
+      _showErrorDialog('Unable to process your request. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    final colors = appColors(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colors.box,
+        title: Text(
+          'Error',
+          style: TextStyle(
+            color: colors.white,
+            fontSize: screenWidth * 0.045,
+          ),
+        ),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: colors.hintText,
+            fontSize: screenWidth * 0.04,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'OK',
+              style: TextStyle(
+                color: colors.green,
+                fontSize: screenWidth * 0.04,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -239,7 +330,7 @@ class _LeaveFormHomePageState extends State<LeaveFormHomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.box,
                       padding: EdgeInsets.symmetric(
@@ -267,7 +358,7 @@ class _LeaveFormHomePageState extends State<LeaveFormHomePage> {
                     ),
                   ),
                   ElevatedButton(
-                    onPressed: _submitForm,
+                    onPressed: _isLoading ? null : _submitForm,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.green,
                       padding: EdgeInsets.symmetric(
@@ -279,20 +370,30 @@ class _LeaveFormHomePageState extends State<LeaveFormHomePage> {
                       ),
                       elevation: 5,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.check,
-                            size: screenWidth * 0.06, color: colors.white),
-                        SizedBox(width: screenHeight * 0.01),
-                        Text(
-                          'Submit',
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.045,
-                            color: colors.white,
+                    child: _isLoading
+                        ? SizedBox(
+                            width: screenWidth * 0.06,
+                            height: screenWidth * 0.06,
+                            child: CircularProgressIndicator(
+                              color: colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Row(
+                            children: [
+                              Icon(Icons.check,
+                                  size: screenWidth * 0.06,
+                                  color: colors.white),
+                              SizedBox(width: screenHeight * 0.01),
+                              Text(
+                                'Submit',
+                                style: TextStyle(
+                                  fontSize: screenWidth * 0.045,
+                                  color: colors.white,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
@@ -345,69 +446,6 @@ class _LeaveFormHomePageState extends State<LeaveFormHomePage> {
           ),
         ),
       ],
-    );
-  }
-
-  // void _showErrorDialog(String message) {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Text('Error'),
-  //       content: Text(message),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.pop(context),
-  //           child: const Text('OK'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    try {
-      if (!await isWithinRadius()) {
-        _showErrorDialog('You must be within campus boundaries');
-        return;
-      }
-
-      final encryptedData = CryptoUtils.encryptData({
-        ...qrData,
-        "UniqueID": const Uuid().v4(),
-        "Reason": _reasonController.text,
-        "Destination": _destinationController.text,
-        "ReturnDate": _returnDateController.text,
-        "EmergencyContact": _emergencyContactController.text,
-      });
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => QRCodeGenerator(encryptedData: encryptedData),
-        ),
-      );
-    } catch (e) {
-      _showErrorDialog('Error: $e');
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    final colors = appColors(context);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: colors.box,
-        title: Text('Error', style: TextStyle(color: colors.white)),
-        content: Text(message, style: TextStyle(color: colors.hintText)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: TextStyle(color: colors.green)),
-          ),
-        ],
-      ),
     );
   }
 }

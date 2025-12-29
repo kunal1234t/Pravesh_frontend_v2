@@ -5,8 +5,99 @@ import 'package:pravesh_screen/warden/warden_students_outside_screen.dart';
 import 'package:pravesh_screen/warden/LateEntryRequestsScreen.dart';
 import 'package:pravesh_screen/warden/MyGate.dart';
 
-class WardenHomeScreen extends StatelessWidget {
+class WardenHomeScreen extends StatefulWidget {
   const WardenHomeScreen({super.key});
+
+  @override
+  State<WardenHomeScreen> createState() => _WardenHomeScreenState();
+}
+
+class _WardenHomeScreenState extends State<WardenHomeScreen> {
+  bool _isLoading = true;
+  bool _hasError = false;
+  String wardenName = '';
+  String location = '';
+  int studentsOutsideCount = 0;
+  int lateRequestsCount = 0;
+  int gatePendingCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
+    try {
+      // TODO: Replace with actual Strapi API calls
+      // Example: Fetch warden profile
+      // final profileResponse = await http.get(
+      //   Uri.parse('${strapiBaseUrl}/api/users/me?populate=*'),
+      //   headers: {'Authorization': 'Bearer $token'},
+      // );
+      //
+      // if (profileResponse.statusCode == 200) {
+      //   final profileData = json.decode(profileResponse.body);
+      //   wardenName = profileData['name'] ?? '';
+      //   location = profileData['location'] ?? '';
+      // }
+
+      // TODO: Fetch students outside count
+      // final studentsOutsideResponse = await http.get(
+      //   Uri.parse('${strapiBaseUrl}/api/student-entries?filters[status][$eq]=outside&filters[hostel][$eq]=${wardenHostelId}'),
+      //   headers: {'Authorization': 'Bearer $token'},
+      // );
+      //
+      // if (studentsOutsideResponse.statusCode == 200) {
+      //   final studentsData = json.decode(studentsOutsideResponse.body);
+      //   studentsOutsideCount = studentsData['meta']['pagination']['total'] ?? 0;
+      // }
+
+      // TODO: Fetch late entry requests count
+      // final lateRequestsResponse = await http.get(
+      //   Uri.parse('${strapiBaseUrl}/api/late-entry-requests?filters[status][$eq]=pending&filters[hostel][$eq]=${wardenHostelId}'),
+      //   headers: {'Authorization': 'Bearer $token'},
+      // );
+      //
+      // if (lateRequestsResponse.statusCode == 200) {
+      //   final lateRequestsData = json.decode(lateRequestsResponse.body);
+      //   lateRequestsCount = lateRequestsData['meta']['pagination']['total'] ?? 0;
+      // }
+
+      // TODO: Fetch gate pending visitors count
+      // final gatePendingResponse = await http.get(
+      //   Uri.parse('${strapiBaseUrl}/api/gate-visitors?filters[status][$eq]=pending&filters[hostel][$eq]=${wardenHostelId}'),
+      //   headers: {'Authorization': 'Bearer $token'},
+      // );
+      //
+      // if (gatePendingResponse.statusCode == 200) {
+      //   final gateData = json.decode(gatePendingResponse.body);
+      //   gatePendingCount = gateData['meta']['pagination']['total'] ?? 0;
+      // }
+
+      // Simulated delay for demonstration
+      await Future.delayed(const Duration(seconds: 1));
+
+      setState(() {
+        wardenName = 'Mr. Harsh Goud';
+        location = 'Nagpur, Maharashtra';
+        studentsOutsideCount = 3;
+        lateRequestsCount = 2;
+        gatePendingCount = 2;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _isLoading = false;
+      });
+    }
+  }
 
   // Dynamic greeting based on time
   String get _greeting {
@@ -46,7 +137,7 @@ class WardenHomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Hello Mr. Harsh Goud",
+                        _isLoading ? "Hello..." : "Hello $wardenName",
                         style: TextStyle(
                           fontSize: screenWidth * 0.04,
                           color: colors.white.withOpacity(0.7),
@@ -77,7 +168,7 @@ class WardenHomeScreen extends StatelessWidget {
                       ),
                       SizedBox(height: screenHeight * 0.005),
                       Text(
-                        "Nagpur, Maharashtra",
+                        _isLoading ? "..." : location,
                         style: TextStyle(
                           fontSize: screenWidth * 0.03,
                           color: colors.white.withOpacity(0.6),
@@ -87,77 +178,100 @@ class WardenHomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-        
+
               SizedBox(height: screenHeight * 0.03),
-        
+
               // Counters
               Row(
                 children: [
-                  _infoCard(context, "Students Outside", "3", Icons.groups),
+                  _infoCard(
+                    context,
+                    "Students Outside",
+                    _isLoading ? "-" : "$studentsOutsideCount",
+                    Icons.groups,
+                  ),
                   SizedBox(width: screenWidth * 0.04),
-                  _infoCard(context, "Late Requests", "2", Icons.warning_amber),
+                  _infoCard(
+                    context,
+                    "Late Requests",
+                    _isLoading ? "-" : "$lateRequestsCount",
+                    Icons.warning_amber,
+                  ),
                 ],
               ),
               SizedBox(height: screenHeight * 0.025),
-        
-              // Urgent Alert
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(screenWidth * 0.045),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+
+              // Urgent Alert (only show when lateRequestsCount > 0)
+              if (!_isLoading && lateRequestsCount > 0)
+                Column(
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.error_outline, color: Colors.red, size: screenWidth * 0.06),
-                        SizedBox(width: screenWidth * 0.02),
-                        Text(
-                          "Urgent: Late Entry Requests",
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                            fontSize: screenWidth * 0.045,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: screenHeight * 0.01),
-                    Text(
-                      "2 student(s) requesting late entry permission",
-                      style: TextStyle(color: colors.white, fontSize: screenWidth * 0.035),
-                    ),
-                    SizedBox(height: screenHeight * 0.015),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        minimumSize: Size(double.infinity, screenHeight * 0.06),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(screenWidth * 0.045),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red),
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const LateEntryRequestsScreen()),
-                        );
-                      },
-                      child: Text("Review Requests", style: TextStyle(fontSize: screenWidth * 0.04)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.error_outline,
+                                  color: Colors.red, size: screenWidth * 0.06),
+                              SizedBox(width: screenWidth * 0.02),
+                              Text(
+                                "Urgent: Late Entry Requests",
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: screenWidth * 0.045,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          Text(
+                            "$lateRequestsCount student(s) requesting late entry permission",
+                            style: TextStyle(
+                                color: colors.white,
+                                fontSize: screenWidth * 0.035),
+                          ),
+                          SizedBox(height: screenHeight * 0.015),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              minimumSize:
+                                  Size(double.infinity, screenHeight * 0.06),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const LateEntryRequestsScreen()),
+                              );
+                            },
+                            child: Text("Review Requests",
+                                style: TextStyle(fontSize: screenWidth * 0.04)),
+                          ),
+                        ],
+                      ),
                     ),
+                    SizedBox(height: screenHeight * 0.025),
                   ],
                 ),
-              ),
-              SizedBox(height: screenHeight * 0.025),
-        
+
               // Buttons
               _wideButton(
                 context,
-                label: "Students Outside (3)",
+                label: _isLoading
+                    ? "Students Outside (-)"
+                    : "Students Outside ($studentsOutsideCount)",
                 icon: Icons.groups,
                 color: Colors.blue,
                 onTap: () {
@@ -171,7 +285,9 @@ class WardenHomeScreen extends StatelessWidget {
               SizedBox(height: screenHeight * 0.015),
               _wideButton(
                 context,
-                label: "My Gate (2 Pending)",
+                label: _isLoading
+                    ? "My Gate (- Pending)"
+                    : "My Gate ($gatePendingCount Pending)",
                 icon: Icons.shield,
                 color: colors.green,
                 onTap: () {

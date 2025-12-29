@@ -28,6 +28,15 @@
 		<string>LaunchScreen</string>
 		<key>UIMainStoryboardFile</key>
 		<string>Main</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Location is required to verify campus exit.</string>
+
+		<key>NSLocationAlwaysUsageDescription</key>
+		<string>Location is required to verify campus exit.</string>
+
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>Location is required to verify campus exit.</string>
+
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>

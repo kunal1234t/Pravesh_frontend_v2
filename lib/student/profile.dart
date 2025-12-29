@@ -1,13 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:pravesh_screen/app_colors_provider.dart';
 
-class ViewProfileScreen extends StatelessWidget {
-  final String userName = "Ankit Yadav";
-  final String userEmail = "bt24csd007@iiitn.ac.in";
-  final String roomNo = "235";
-  final String mobileNo = "7878356069";
+class UserProfile {
+  final String userName;
+  final String userEmail;
+  final String roomNo;
+  final String mobileNo;
+  final String? profileImagePath;
 
-  const ViewProfileScreen({super.key});
+  const UserProfile({
+    required this.userName,
+    required this.userEmail,
+    required this.roomNo,
+    required this.mobileNo,
+    this.profileImagePath,
+  });
+}
+
+class ViewProfileScreen extends StatelessWidget {
+  final UserProfile userProfile;
+
+  const ViewProfileScreen({
+    super.key,
+    required this.userProfile,
+  });
+
+  factory ViewProfileScreen.withMockData() {
+    return ViewProfileScreen(
+      key: const Key('ViewProfileScreen'),
+      userProfile: const UserProfile(
+        userName: "Ankit Yadav",
+        userEmail: "bt24csd007@iiitn.ac.in",
+        roomNo: "235",
+        mobileNo: "7878356069",
+        profileImagePath: 'assets/default_profile.png',
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,8 +79,10 @@ class ViewProfileScreen extends StatelessWidget {
                       color: colors.green,
                       width: screenWidth * 0.01,
                     ),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/default_profile.png'),
+                    image: DecorationImage(
+                      image: userProfile.profileImagePath != null
+                          ? AssetImage(userProfile.profileImagePath!)
+                          : const AssetImage('assets/default_profile.png'),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -64,7 +95,7 @@ class ViewProfileScreen extends StatelessWidget {
                 context: context,
                 icon: Icons.person_outline,
                 title: "Full Name",
-                value: userName,
+                value: userProfile.userName,
                 screenWidth: screenWidth,
               ),
               SizedBox(height: screenHeight * 0.025),
@@ -73,7 +104,7 @@ class ViewProfileScreen extends StatelessWidget {
                 context: context,
                 icon: Icons.email_outlined,
                 title: "Email Address",
-                value: userEmail,
+                value: userProfile.userEmail,
                 screenWidth: screenWidth,
               ),
               SizedBox(height: screenHeight * 0.025),
@@ -82,7 +113,7 @@ class ViewProfileScreen extends StatelessWidget {
                 context: context,
                 icon: Icons.meeting_room_outlined,
                 title: "Room Number",
-                value: roomNo,
+                value: userProfile.roomNo,
                 screenWidth: screenWidth,
               ),
               SizedBox(height: screenHeight * 0.025),
@@ -91,13 +122,13 @@ class ViewProfileScreen extends StatelessWidget {
                 context: context,
                 icon: Icons.phone_android_outlined,
                 title: "Mobile Number",
-                value: mobileNo,
+                value: userProfile.mobileNo,
                 screenWidth: screenWidth,
               ),
             ],
           ),
         ),
-      ), // If you have a custom nav bar
+      ),
     );
   }
 

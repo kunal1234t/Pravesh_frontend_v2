@@ -1,9 +1,10 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:pravesh_screen/student/QRGenerator.dart';
 import 'package:pravesh_screen/app_colors_provider.dart';
-import 'package:pravesh_screen/cryptoUtils.dart';
-import 'package:uuid/uuid.dart';
+import 'package:pravesh_screen/services/exit_service.dart';
 
 class ExitFormHomePage extends StatefulWidget {
   const ExitFormHomePage({super.key});
@@ -15,9 +16,9 @@ class ExitFormHomePage extends StatefulWidget {
 class _ExitFormHomePageState extends State<ExitFormHomePage> {
   final _formKey = GlobalKey<FormState>();
   final _reasonController = TextEditingController();
-  final double targetLatitude = 20.95007;
-  final double targetLongitude = 79.02626;
-  final double allowedRadius = 10000;
+  final double targetLatitude = 28.4476255;
+  final double targetLongitude = 77.3027103;
+  final double allowedRadius = 100000;
 
   String? _selectedReasonType;
   bool _showOtherReasonField = false;
@@ -25,34 +26,51 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
 
   final List<String> _reasonOptions = ['Nagpur', 'Butibori', 'Walk', 'Others'];
 
-  Future<bool> isWithinRadius() async {
-    if (!await Geolocator.isLocationServiceEnabled()) {
-      _showErrorDialog('Location services are disabled.');
-      return false;
+  Future<bool> _isWithinRadius() async {
+    // Bypass geofencing for web during development
+    if (kIsWeb) {
+      return true;
     }
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        _showErrorDialog('Location permission denied.');
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _showErrorDialog('Location services are disabled.');
         return false;
       }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      _showErrorDialog(
-          'Location permission is permanently denied. Please enable it in settings.');
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showErrorDialog('Location permission denied.');
+          return false;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        _showErrorDialog(
+            'Location permission is permanently denied. Please enable it in settings.');
+        return false;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      final distance = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        targetLatitude,
+        targetLongitude,
+      );
+
+      return distance <= allowedRadius;
+    } on TimeoutException {
+      _showErrorDialog('Location request timed out. Please try again.');
+      return false;
+    } catch (e) {
+      _showErrorDialog('Unable to determine your location. Please try again.');
       return false;
     }
-
-    Position position = await Geolocator.getCurrentPosition();
-    return Geolocator.distanceBetween(
-          position.latitude,
-          position.longitude,
-          targetLatitude,
-          targetLongitude,
-        ) <=
-        allowedRadius;
   }
 
   @override
@@ -75,7 +93,7 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
           icon: Icon(
             Icons.arrow_back,
             color: colors.white,
-            size: screenWidth * 0.075, // ~28px on 375px width
+            size: screenWidth * 0.075,
           ),
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -84,27 +102,25 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
           "EXIT FORM",
           style: TextStyle(
             color: colors.white,
-            fontSize: screenWidth * 0.055, // ~20.6px
+            fontSize: screenWidth * 0.055,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(screenWidth * 0.04), // ~15px
+        padding: EdgeInsets.all(screenWidth * 0.04),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               Container(
                 padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.04, // ~15px
-                    vertical: screenHeight * 0.02 // ~16px on 812px height
-                    ),
+                    horizontal: screenWidth * 0.04,
+                    vertical: screenHeight * 0.02),
                 decoration: BoxDecoration(
                   color: colors.green.withOpacity(0.2),
-                  borderRadius:
-                      BorderRadius.circular(screenWidth * 0.03), // ~11px
+                  borderRadius: BorderRadius.circular(screenWidth * 0.03),
                   border: Border.all(color: colors.green, width: 1),
                 ),
                 child: Center(
@@ -112,15 +128,13 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
                     'Fill the details to Exit',
                     style: TextStyle(
                       color: colors.green,
-                      fontSize: screenWidth * 0.045, // ~17px
+                      fontSize: screenWidth * 0.045,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: screenHeight * 0.06), // ~49px
-
-              // Reason Type
+              SizedBox(height: screenHeight * 0.06),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -128,41 +142,40 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
                     'Reason Type',
                     style: TextStyle(
                       color: colors.white,
-                      fontSize: screenWidth * 0.04, // ~15px
+                      fontSize: screenWidth * 0.04,
                     ),
                   ),
-                  SizedBox(height: screenHeight * 0.015), // ~12px
+                  SizedBox(height: screenHeight * 0.015),
                   Container(
                     decoration: BoxDecoration(
                       color: colors.box,
-                      borderRadius:
-                          BorderRadius.circular(screenWidth * 0.03), // ~11px
+                      borderRadius: BorderRadius.circular(screenWidth * 0.03),
                     ),
                     padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.03, // ~11px
+                      horizontal: screenWidth * 0.03,
                     ),
                     child: DropdownButtonFormField<String>(
                       value: _selectedReasonType,
                       dropdownColor: colors.box,
                       icon: Icon(Icons.arrow_drop_down, color: colors.green),
-                      iconSize: screenWidth * 0.06, // ~22px
+                      iconSize: screenWidth * 0.06,
                       style: TextStyle(
                         color: colors.white,
-                        fontSize: screenWidth * 0.04, // ~15px
+                        fontSize: screenWidth * 0.04,
                       ),
                       decoration: InputDecoration(
                         border: InputBorder.none,
                         prefixIcon: Icon(
                           Icons.list_alt_outlined,
                           color: colors.green,
-                          size: screenWidth * 0.06, // ~22px
+                          size: screenWidth * 0.06,
                         ),
                       ),
                       hint: Text(
                         'Select Reason Type',
                         style: TextStyle(
                           color: colors.hintText,
-                          fontSize: screenWidth * 0.04, // ~15px
+                          fontSize: screenWidth * 0.04,
                         ),
                       ),
                       items: _reasonOptions.map((String value) {
@@ -181,10 +194,7 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
                   ),
                 ],
               ),
-
-              SizedBox(height: screenHeight * 0.04), // ~32px
-
-              // Other Reason Field
+              SizedBox(height: screenHeight * 0.04),
               if (_showOtherReasonField)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,10 +203,10 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
                       'Specify Reason',
                       style: TextStyle(
                         color: colors.white,
-                        fontSize: screenWidth * 0.04, // ~15px
+                        fontSize: screenWidth * 0.04,
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.015), // ~12px
+                    SizedBox(height: screenHeight * 0.015),
                     TextFormField(
                       controller: _reasonController,
                       style: TextStyle(color: colors.white),
@@ -207,62 +217,53 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
                         prefixIcon: Icon(
                           Icons.edit_outlined,
                           color: colors.green,
-                          size: screenWidth * 0.06, // ~22px
+                          size: screenWidth * 0.06,
                         ),
                         filled: true,
                         fillColor: colors.box,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(
-                              screenWidth * 0.03), // ~11px
+                          borderRadius:
+                              BorderRadius.circular(screenWidth * 0.03),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding:
-                            EdgeInsets.all(screenWidth * 0.04), // ~15px
+                        contentPadding: EdgeInsets.all(screenWidth * 0.04),
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.04), // ~32px
+                    SizedBox(height: screenHeight * 0.04),
                   ],
                 ),
-
-              SizedBox(height: screenHeight * 0.06), // ~49px
-
-              // Buttons
+              SizedBox(height: screenHeight * 0.06),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Cancel Button
                   ElevatedButton(
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: colors.box,
                       padding: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.06, // ~22px
-                        vertical: screenHeight * 0.02, // ~16px
+                        horizontal: screenWidth * 0.06,
+                        vertical: screenHeight * 0.02,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(screenWidth * 0.03), // ~11px
+                        borderRadius: BorderRadius.circular(screenWidth * 0.03),
                         side: BorderSide(color: colors.green),
                       ),
                     ),
                     child: Row(
                       children: [
                         Icon(Icons.close,
-                            size: screenWidth * 0.06, // ~22px
-                            color: colors.green),
-                        SizedBox(width: screenHeight * 0.01), // ~8px
+                            size: screenWidth * 0.06, color: colors.green),
+                        SizedBox(width: screenHeight * 0.01),
                         Text(
                           'Cancel',
                           style: TextStyle(
-                            fontSize: screenWidth * 0.045, // ~17px
+                            fontSize: screenWidth * 0.045,
                             color: colors.green,
                           ),
                         ),
                       ],
                     ),
                   ),
-
-                  // Submit Button or Loader
                   _isLoading
                       ? CircularProgressIndicator(color: colors.green)
                       : ElevatedButton(
@@ -270,25 +271,25 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: colors.green,
                             padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.06, // ~22px
-                              vertical: screenHeight * 0.02, // ~16px
+                              horizontal: screenWidth * 0.06,
+                              vertical: screenHeight * 0.02,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                  screenWidth * 0.03), // ~11px
+                              borderRadius:
+                                  BorderRadius.circular(screenWidth * 0.03),
                             ),
                             elevation: 5,
                           ),
                           child: Row(
                             children: [
                               Icon(Icons.check,
-                                  size: screenWidth * 0.06, // ~22px
+                                  size: screenWidth * 0.06,
                                   color: colors.white),
-                              SizedBox(width: screenHeight * 0.01), // ~8px
+                              SizedBox(width: screenHeight * 0.01),
                               Text(
                                 'Submit',
                                 style: TextStyle(
-                                  fontSize: screenWidth * 0.045, // ~17px
+                                  fontSize: screenWidth * 0.045,
                                   color: colors.white,
                                 ),
                               ),
@@ -297,18 +298,15 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
                         ),
                 ],
               ),
-
-              SizedBox(height: screenHeight * 0.04), // ~32px
-
+              SizedBox(height: screenHeight * 0.04),
               Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.05), // ~19px
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
                 child: Text(
                   'Note: QR code will only generate if you are within campus boundaries.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: colors.hintText,
-                    fontSize: screenWidth * 0.035, // ~13px
+                    fontSize: screenWidth * 0.035,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -336,7 +334,11 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
     setState(() => _isLoading = true);
 
     try {
-      if (!await isWithinRadius()) return;
+      final withinRadius = await _isWithinRadius();
+      if (!withinRadius) {
+        setState(() => _isLoading = false);
+        return;
+      }
 
       String reasonType = _selectedReasonType!;
       String reasonDetails = _reasonController.text.trim();
@@ -345,22 +347,32 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
         reasonType = reasonDetails;
       }
 
-      final encryptedData = CryptoUtils.encryptData({
-        "UniqueID": Uuid().v4(),
-        "ReasonType": reasonType,
-        "ReasonDetails": reasonDetails,
-      });
+      // Call backend to create exit request
+      final Map<String, dynamic> exitData = {
+        'reason': reasonType,
+      };
 
+      // This calls POST /api/exit-requests
+      final response = await ExitService.submitExitRequest(exitData);
+
+      // Backend returns: { "exitRequestId": number, "qr": { "t": string, "e": number } }
+      final Map<String, dynamic> qr = response['qr'] as Map<String, dynamic>;
+
+      final String qrData = '${qr['t']}|${qr['e']}';
+
+      // Navigate to QR screen with plain text data
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => QRCodeGenerator(encryptedData: encryptedData),
+          builder: (context) => QRCodeGenerator(qrData: qrData),
         ),
       );
     } catch (e) {
-      _showErrorDialog('Error: $e');
+      _showErrorDialog(e.toString());
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -376,14 +388,14 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
           'Error',
           style: TextStyle(
             color: colors.white,
-            fontSize: screenWidth * 0.045, // ~17px
+            fontSize: screenWidth * 0.045,
           ),
         ),
         content: Text(
           message,
           style: TextStyle(
             color: colors.hintText,
-            fontSize: screenWidth * 0.04, // ~15px
+            fontSize: screenWidth * 0.04,
           ),
         ),
         actions: [
@@ -393,7 +405,7 @@ class _ExitFormHomePageState extends State<ExitFormHomePage> {
               'OK',
               style: TextStyle(
                 color: colors.green,
-                fontSize: screenWidth * 0.04, // ~15px
+                fontSize: screenWidth * 0.04,
               ),
             ),
           ),

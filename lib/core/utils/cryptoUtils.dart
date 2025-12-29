@@ -1,23 +1,54 @@
+import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
+
 import 'package:encrypt/encrypt.dart' as encrypt;
-import 'dart:convert'; // Required for jsonEncode
 
-
+/// ⚠️ NOTE:
+/// This is for payload obfuscation / defense-in-depth.
+/// DO NOT rely on this as primary security.
 class CryptoUtils {
-  // Encryption key (32 bytes for AES-256)
-  static final encrypt.Key encryptionKey = encrypt.Key.fromUtf8('my32lengthsupersecretnooneknows1');
+  /// 🔐 Key should come from secure source (env / backend / runtime)
+  static encrypt.Key deriveKey(String secret) {
+    // Ensure 32 bytes for AES-256
+    return encrypt.Key.fromUtf8(secret.padRight(32).substring(0, 32));
+  }
 
-  // Initialization vector (16 bytes for AES)
-  static final encrypt.IV iv = encrypt.IV.fromLength(16);
+  /// 🔄 Generate random IV per encryption (CRITICAL)
+  static encrypt.IV _generateRandomIV() {
+    final rnd = Random.secure();
+    return encrypt.IV(
+      Uint8List.fromList(
+        List<int>.generate(16, (_) => rnd.nextInt(256)),
+      ),
+    );
+  }
 
-  // Encrypt the data using AES
-  static String encryptData(Map<String, dynamic> data) {
+  /// Encrypt JSON-safe payload
+  /// Returns: base64(iv + ciphertext)
+  static String encryptData({
+    required Map<String, dynamic> data,
+    required String secret,
+  }) {
     try {
-      final encrypter = encrypt.Encrypter(encrypt.AES(encryptionKey, mode: encrypt.AESMode.cbc));
+      final key = deriveKey(secret);
+      final iv = _generateRandomIV();
+
+      final encrypter = encrypt.Encrypter(
+        encrypt.AES(
+          key,
+          mode: encrypt.AESMode.cbc,
+        ),
+      );
+
       final jsonString = jsonEncode(data);
       final encrypted = encrypter.encrypt(jsonString, iv: iv);
-      return encrypted.base64;
+
+      // Prepend IV to ciphertext
+      final combined = iv.bytes + encrypted.bytes;
+      return base64Encode(combined);
     } catch (e) {
-      throw Exception('Encryption failed: $e');
+      throw Exception('Encryption failed');
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pravesh_screen/app_colors_provider.dart';
+import 'package:pravesh_screen/auth_gate.dart';
 import 'package:pravesh_screen/widgets/color.dart';
 import 'package:pravesh_screen/widgets/navbar.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -208,7 +209,7 @@ class _ThirdpageState extends State<Thirdpage>
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (BuildContext context) => const Navbar(),
+                          builder: (BuildContext context) => const AuthGate(),
                         ),
                         (route) => false,
                       );

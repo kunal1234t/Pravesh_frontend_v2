@@ -1,54 +1,125 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pravesh_screen/app_colors_provider.dart';
-
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 class QRCodeGenerator extends StatefulWidget {
-  final String encryptedData;
+  final String qrData;
 
-  const QRCodeGenerator({super.key, required this.encryptedData});
+  const QRCodeGenerator({super.key, required this.qrData});
 
   @override
   State<QRCodeGenerator> createState() => _QRCodeGeneratorState();
 }
 
-class _QRCodeGeneratorState extends State<QRCodeGenerator> {
-  int _remainingTime = 300; // 30 seconds
-  late Timer _timer;
+class _QRCodeGeneratorState extends State<QRCodeGenerator>
+    with WidgetsBindingObserver {
+  late final String _qrId;
+  late final DateTime _expiresAt;
+  int _remainingTime = 0;
+  Timer? _timer;
+  bool _isActive = true;
+  bool _isConsumed = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    _qrId = const Uuid().v4();
+    _expiresAt = DateTime.now().add(const Duration(minutes: 5));
+    _updateRemainingTime();
+    _startSecureSession();
     _startTimer();
   }
 
+  void _startSecureSession() {
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
+  }
+
+  void _updateRemainingTime() {
+    final now = DateTime.now();
+    final difference = _expiresAt.difference(now);
+    _remainingTime = difference.inSeconds > 0 ? difference.inSeconds : 0;
+  }
+
   void _startTimer() {
-    const oneSecond = Duration(seconds: 1);
-    _timer = Timer.periodic(oneSecond, (timer) {
-      setState(() {
-        if (_remainingTime > 0) {
-          _remainingTime--;
-        } else {
-          _timer.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || !_isActive) return;
+
+      final previousTime = _remainingTime;
+      _updateRemainingTime();
+
+      if (_remainingTime != previousTime && mounted) {
+        setState(() {});
+      }
+
+      if (_remainingTime <= 0) {
+        _timer?.cancel();
+        _isConsumed = true;
+        if (mounted) {
           _showTimeLimitExceededDialog();
         }
-      });
+      }
     });
+  }
+
+  void _pauseTimer() {
+    _isActive = false;
+    _timer?.cancel();
+  }
+
+  void _resumeTimer() {
+    if (_isActive || _remainingTime <= 0) return;
+
+    if (DateTime.now().isAfter(_expiresAt)) {
+      _isConsumed = true;
+      if (mounted) {
+        _showTimeLimitExceededDialog();
+      }
+      return;
+    }
+
+    _isActive = true;
+    _updateRemainingTime();
+
+    if (_remainingTime > 0) {
+      _startTimer();
+    } else {
+      _isConsumed = true;
+      if (mounted) {
+        _showTimeLimitExceededDialog();
+      }
+    }
+  }
+
+  String _getQRPayload() {
+    if (_isConsumed || _remainingTime <= 0) {
+      return 'EXPIRED';
+    }
+    return '${widget.qrData}|$_qrId|${_expiresAt.toIso8601String()}';
   }
 
   void _showTimeLimitExceededDialog() {
     final colors = appColors(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final Color primaryColor = colors.green;
-    final Color cardColor = colors.box;
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: cardColor,
+          backgroundColor: colors.box,
           title: Text(
             'QR Expired',
             style: TextStyle(
@@ -66,13 +137,15 @@ class _QRCodeGeneratorState extends State<QRCodeGenerator> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.of(context).pop();
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
               },
               child: Text(
                 'OK',
                 style: TextStyle(
-                  color: primaryColor,
+                  color: colors.green,
                   fontSize: screenWidth * 0.04,
                 ),
               ),
@@ -84,53 +157,55 @@ class _QRCodeGeneratorState extends State<QRCodeGenerator> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
+        _pauseTimer();
+        break;
+      case AppLifecycleState.resumed:
+        _resumeTimer();
+        break;
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        break;
+    }
+  }
+
+  @override
   void dispose() {
-    _timer.cancel();
+    _isConsumed = true;
+    _pauseTimer();
+    _timer = null;
+    WidgetsBinding.instance.removeObserver(this);
+
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.edgeToEdge,
+        overlays: SystemUiOverlay.values,
+      );
+      SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    }
+
     super.dispose();
   }
 
   String _formatTime(int seconds) {
-    int minutes = seconds ~/ 30;
-    int remainingSeconds = seconds % 30;
-    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
+    final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
+    final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
+    return '$minutes:$remainingSeconds';
   }
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> qrData = {
-      "name": "abc",
-      "username": "ese",
-      "user_id": "bt24cseXXX",
-      "phone_numebr": 123456789,
-      "type": "exit"
-    };
-
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final colors = appColors(context);
-    final Color primaryColor = colors.green;
-    final Color backgroundColor = colors.background;
-    final Color cardColor = colors.box;
-
-    // Percentage-based calculations
-    final double horizontalPadding = screenWidth * 0.05;
-    final double verticalPadding = screenHeight * 0.03;
-    final double subtitleFontSize = screenWidth * 0.04;
-    final double timerLabelFontSize = screenWidth * 0.04;
-    final double instructionFontSize = screenWidth * 0.045;
-    final double buttonFontSize = screenWidth * 0.045;
-    final double smallSpacing = screenHeight * 0.01;
-    final double buttonHorizontalPadding = screenWidth * 0.06;
-    final double buttonVerticalPadding = screenHeight * 0.02;
-    final double qrPadding = screenWidth * 0.05;
-    final double qrSize = screenWidth * 0.7;
-    final double borderRadius = screenWidth * 0.03;
-    final double iconSize = screenWidth * 0.06;
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: backgroundColor,
+        backgroundColor: colors.background,
         automaticallyImplyLeading: false,
         title: Text(
           'SCAN QR CODE',
@@ -145,38 +220,36 @@ class _QRCodeGeneratorState extends State<QRCodeGenerator> {
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: verticalPadding,
+            horizontal: screenWidth * 0.05,
+            vertical: screenHeight * 0.03,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Header Section
               Column(
                 children: [
                   Text(
                     'Show this QR code at the gate while exiting',
                     style: TextStyle(
                       color: colors.hintText,
-                      fontSize: subtitleFontSize,
+                      fontSize: screenWidth * 0.04,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
               SizedBox(height: screenHeight * 0.03),
-              // Timer Card
               Container(
                 padding: EdgeInsets.symmetric(
-                  horizontal: buttonHorizontalPadding,
-                  vertical: buttonVerticalPadding,
+                  horizontal: screenWidth * 0.06,
+                  vertical: screenHeight * 0.02,
                 ),
                 decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(borderRadius),
+                  color: colors.box,
+                  borderRadius: BorderRadius.circular(screenWidth * 0.03),
                   boxShadow: [
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.2),
+                      color: colors.green.withOpacity(0.2),
                       blurRadius: 10,
                       spreadRadius: 2,
                     ),
@@ -189,15 +262,15 @@ class _QRCodeGeneratorState extends State<QRCodeGenerator> {
                       'TIME REMAINING',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.7),
-                        fontSize: timerLabelFontSize,
+                        fontSize: screenWidth * 0.04,
                       ),
                     ),
-                    SizedBox(width: smallSpacing),
+                    SizedBox(width: screenHeight * 0.01),
                     Text(
                       _formatTime(_remainingTime),
                       style: TextStyle(
-                        color: primaryColor,
-                        fontSize: timerLabelFontSize,
+                        color: colors.green,
+                        fontSize: screenWidth * 0.04,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -205,71 +278,65 @@ class _QRCodeGeneratorState extends State<QRCodeGenerator> {
                 ),
               ),
               SizedBox(height: screenHeight * 0.04),
-
-              // QR Code Container
               Container(
                 width: screenWidth * 0.65,
                 height: screenWidth * 0.65,
-                padding: EdgeInsets.all(qrPadding),
+                padding: EdgeInsets.all(screenWidth * 0.05),
                 decoration: BoxDecoration(
                   color: colors.white,
-                  borderRadius: BorderRadius.circular(borderRadius * 2),
+                  borderRadius: BorderRadius.circular(screenWidth * 0.06),
                   boxShadow: [
                     BoxShadow(
-                      color: primaryColor.withOpacity(0.3),
+                      color: colors.green.withOpacity(0.3),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
                   ],
                 ),
                 child: QrImageView(
-                  data: widget.encryptedData,
+                  data: _getQRPayload(),
                   version: QrVersions.auto,
-                  size: qrSize,
+                  size: screenWidth * 0.7,
                   foregroundColor: colors.background,
                 ),
               ),
               SizedBox(height: screenHeight * 0.02),
-
-              // Instruction Text
               Text(
                 'Scan before the timer expires',
                 style: TextStyle(
-                  color: primaryColor,
-                  fontSize: instructionFontSize,
+                  color: colors.green,
+                  fontSize: screenWidth * 0.045,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               SizedBox(height: screenHeight * 0.02),
-
-              // Buttons Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Home Button
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pop((context));
+                      Navigator.of(context).pop();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
+                      backgroundColor: colors.green,
                       padding: EdgeInsets.symmetric(
                         horizontal: screenWidth * 0.06,
                         vertical: screenWidth * 0.02,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(borderRadius),
+                        borderRadius: BorderRadius.circular(screenWidth * 0.03),
                       ),
                       elevation: 5,
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.home, size: iconSize, color: colors.white),
-                        SizedBox(width: smallSpacing),
+                        Icon(Icons.home,
+                            size: screenWidth * 0.06, color: colors.white),
+                        SizedBox(width: screenHeight * 0.01),
                         Text(
                           'Home',
                           style: TextStyle(
-                            fontSize: buttonFontSize,
+                            fontSize: screenWidth * 0.045,
                             color: colors.white,
                           ),
                         ),

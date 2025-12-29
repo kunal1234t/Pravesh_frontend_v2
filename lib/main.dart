@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:pravesh_screen/common/profile.dart';
 import 'package:pravesh_screen/login.dart';
 import 'package:pravesh_screen/themeNotifier.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'auth_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SharedPreferences.getInstance();
-  
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => ThemeNotifier(),
@@ -42,7 +44,10 @@ class MyApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: const LoginPage(),
+      home: const AuthGate(),
+      routes: {
+        '/profile': (context) => ViewProfileScreen(),
+      },
     );
   }
 }

@@ -1,39 +1,65 @@
-// Refactored visitor_info.dart for responsiveness
 import 'package:flutter/material.dart';
-import 'package:pravesh_screen/guard/request2.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Visitor Information',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color.fromARGB(255, 52, 59, 72),
-        fontFamily: 'Inter',
-      ),
-      home: const VisitorInformationScreen(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
-}
+import 'package:pravesh_screen/guard/request.dart';
+import 'package:pravesh_screen/widgets/protected_route.dart';
 
 class VisitorInformationScreen extends StatefulWidget {
   const VisitorInformationScreen({super.key});
 
   @override
-  State<VisitorInformationScreen> createState() => _VisitorInformationScreenState();
+  State<VisitorInformationScreen> createState() =>
+      _VisitorInformationScreenState();
 }
 
 class _VisitorInformationScreenState extends State<VisitorInformationScreen> {
+  final TextEditingController _visitorNameController = TextEditingController();
+  final TextEditingController _reasonController = TextEditingController();
   String? _selectedTeacher;
+  bool _isSubmitting = false;
   final List<String> _teachers = ['Prof. Johnson', 'Prof. Brown', 'Dr. Smith'];
+
+  void _handleSendRequest() async {
+    if (_visitorNameController.text.isEmpty ||
+        _reasonController.text.isEmpty ||
+        _selectedTeacher == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final requestData = {
+      'visitorName': _visitorNameController.text,
+      'meetingWith': _selectedTeacher!,
+      'reason': _reasonController.text,
+    };
+
+    // TODO: send requestData to backend and receive requestId
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProtectedRoute(
+          allowedRoles: const ['Guard'],
+          child: const RequestStatusScreen(requestId: 'TEMP_REQUEST_ID'),
+        ),
+      ),
+    );
+
+    setState(() {
+      _isSubmitting = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _visitorNameController.dispose();
+    _reasonController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,22 +79,27 @@ class _VisitorInformationScreenState extends State<VisitorInformationScreen> {
         ),
         title: Text(
           'Visitor Information',
-          style: TextStyle(fontSize: screenWidth * 0.05, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              fontSize: screenWidth * 0.05, fontWeight: FontWeight.bold),
         ),
         centerTitle: false,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenWidth * 0.04),
+            padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.05, vertical: screenWidth * 0.04),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: EdgeInsets.only(left: screenWidth * 0.01, bottom: screenWidth * 0.06),
+                  padding: EdgeInsets.only(
+                      left: screenWidth * 0.01, bottom: screenWidth * 0.06),
                   child: Text(
                     'Fill in visitor details and select teacher',
-                    style: TextStyle(color: secondaryTextColor, fontSize: screenWidth * 0.035),
+                    style: TextStyle(
+                        color: secondaryTextColor,
+                        fontSize: screenWidth * 0.035),
                   ),
                 ),
                 _buildPhotoCapturedCard(screenWidth),
@@ -76,16 +107,22 @@ class _VisitorInformationScreenState extends State<VisitorInformationScreen> {
                 _buildLabel(screenWidth, 'Visitor Name'),
                 SizedBox(height: screenWidth * 0.03),
                 TextFormField(
-                  style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.04),
-                  decoration: _buildInputDecoration(screenWidth, "Enter visitor's full name"),
+                  controller: _visitorNameController,
+                  style: TextStyle(
+                      color: Colors.white, fontSize: screenWidth * 0.04),
+                  decoration: _buildInputDecoration(
+                      screenWidth, "Enter visitor's full name"),
                 ),
                 SizedBox(height: screenWidth * 0.05),
                 _buildLabel(screenWidth, 'Reason for Visit'),
                 SizedBox(height: screenWidth * 0.03),
                 TextFormField(
+                  controller: _reasonController,
                   maxLines: 4,
-                  style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.04),
-                  decoration: _buildInputDecoration(screenWidth, "Enter the purpose of visit"),
+                  style: TextStyle(
+                      color: Colors.white, fontSize: screenWidth * 0.04),
+                  decoration: _buildInputDecoration(
+                      screenWidth, "Enter the purpose of visit"),
                 ),
                 SizedBox(height: screenWidth * 0.05),
                 _buildLabel(screenWidth, 'Select Teacher to Meet'),
@@ -95,7 +132,8 @@ class _VisitorInformationScreenState extends State<VisitorInformationScreen> {
                   items: _teachers.map((String teacher) {
                     return DropdownMenuItem<String>(
                       value: teacher,
-                      child: Text(teacher, style: TextStyle(fontSize: screenWidth * 0.04)),
+                      child: Text(teacher,
+                          style: TextStyle(fontSize: screenWidth * 0.04)),
                     );
                   }).toList(),
                   onChanged: (newValue) {
@@ -103,9 +141,14 @@ class _VisitorInformationScreenState extends State<VisitorInformationScreen> {
                       _selectedTeacher = newValue;
                     });
                   },
-                  style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.04, fontFamily: 'Inter'),
-                  icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white70, size: screenWidth * 0.07),
-                  decoration: _buildInputDecoration(screenWidth, "Choose a teacher"),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: screenWidth * 0.04,
+                      fontFamily: 'Inter'),
+                  icon: Icon(Icons.keyboard_arrow_down_rounded,
+                      color: Colors.white70, size: screenWidth * 0.07),
+                  decoration:
+                      _buildInputDecoration(screenWidth, "Choose a teacher"),
                   dropdownColor: const Color(0xFF273348),
                 ),
                 SizedBox(height: screenWidth * 0.1),
@@ -200,13 +243,9 @@ class _VisitorInformationScreenState extends State<VisitorInformationScreen> {
   Widget _buildSendRequestButton(double screenWidth, Color accentGreen) {
     return ElevatedButton.icon(
       icon: Icon(Icons.send_rounded, size: screenWidth * 0.05),
-      label: Text('Send Request to Teacher', style: TextStyle(fontSize: screenWidth * 0.04)),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const RequestStatusScreen()),
-        );
-      },
+      label: Text('Send Request to Teacher',
+          style: TextStyle(fontSize: screenWidth * 0.04)),
+      onPressed: _isSubmitting ? null : _handleSendRequest,
       style: ElevatedButton.styleFrom(
         foregroundColor: Colors.white,
         backgroundColor: accentGreen,
@@ -226,7 +265,8 @@ class _VisitorInformationScreenState extends State<VisitorInformationScreen> {
       hintStyle: const TextStyle(color: Colors.white54),
       filled: true,
       fillColor: const Color(0xFF273348),
-      contentPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05, vertical: screenWidth * 0.04),
+      contentPadding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.05, vertical: screenWidth * 0.04),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(

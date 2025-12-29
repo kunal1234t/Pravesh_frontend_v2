@@ -4,7 +4,7 @@ import 'package:pravesh_screen/app_colors_provider.dart';
 import 'package:pravesh_screen/student/exitForm.dart';
 import 'package:pravesh_screen/student/leaveForm.dart';
 import 'package:pravesh_screen/themeNotifier.dart';
-import 'package:pravesh_screen/widgets/navbar.dart';
+import 'package:pravesh_screen/widgets/color.dart';
 import 'package:provider/provider.dart';
 
 class HomePage extends StatelessWidget {
@@ -13,147 +13,29 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = appColors(context);
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
       color: colors.background,
       child: SafeArea(
         child: Column(
           children: [
-            AppBar(
-              toolbarHeight: screenHeight * 0.12,
-              backgroundColor: colors.background,
-              title: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const Navbar(initialIndex: 2),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: EdgeInsets.all(screenWidth * 0.03),
-                        decoration: BoxDecoration(
-                          color: colors.green.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.person,
-                          color: colors.green,
-                          size: screenWidth * 0.055,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: screenWidth * 0.04),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hello Rishabh',
-                          style: TextStyle(
-                            color: colors.white,
-                            fontSize: screenWidth * 0.042,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          'Good Evening!',
-                          style: TextStyle(
-                            color: colors.green,
-                            fontSize: screenWidth * 0.032,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Spacer(),
-                    IconButton(
-                      onPressed: () => themeNotifier.toggleTheme(),
-                      icon: Icon(
-                        themeNotifier.isDarkMode
-                            ? Icons.light_mode
-                            : Icons.dark_mode,
-                        color: colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const _HomeAppBar(),
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: screenWidth * 0.06,
-                    vertical: screenHeight * 0.02,
+                    horizontal: MediaQuery.of(context).size.width * 0.06,
+                    vertical: MediaQuery.of(context).size.height * 0.02,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: screenHeight * 0.03),
-                      Center(
-                        child: Column(
-                          children: [
-                            Text(
-                              'Scan-Go-Grow',
-                              style: TextStyle(
-                                color: colors.white,
-                                fontSize: screenWidth * 0.06,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.1,
-                              ),
-                            ),
-                            SizedBox(height: screenHeight * 0.005),
-                            Text(
-                              'Campus Exit',
-                              style: TextStyle(
-                                color: colors.green,
-                                fontSize: screenWidth * 0.042,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: screenHeight * 0.08),
-                      Column(
-                        children: [
-                          _CompactActionCard(
-                            icon: Icons.exit_to_app,
-                            title: 'Exit',
-                            accentColor: colors.green,
-                            onTap: () => _showExitDialog(context),
-                            screenWidth: screenWidth,
-                            boxColor: colors.box,
-                            textColor: colors.white,
-                          ),
-                          SizedBox(height: screenHeight * 0.02),
-                          _CompactActionCard(
-                            icon: Icons.login,
-                            title: 'Enter',
-                            accentColor: colors.green,
-                            onTap: () => _showEnterDialog(context),
-                            screenWidth: screenWidth,
-                            boxColor: colors.box,
-                            textColor: colors.white,
-                          ),
-                          SizedBox(height: screenHeight * 0.02),
-                          _CompactActionCard(
-                            icon: Icons.nightlight_round,
-                            title: 'Night Pass',
-                            accentColor: colors.green,
-                            onTap: () => _showNightPassDialog(context),
-                            screenWidth: screenWidth,
-                            boxColor: colors.box,
-                            textColor: colors.white,
-                          ),
-                        ],
-                      ),
+                      SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.03),
+                      const _HeaderSection(),
+                      SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.08),
+                      const _ActionCardsSection(),
                     ],
                   ),
                 ),
@@ -164,27 +46,206 @@ class HomePage extends StatelessWidget {
       ),
     );
   }
+}
 
-  void _showExitDialog(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ExitFormHomePage()),
+class _HomeAppBar extends StatelessWidget {
+  const _HomeAppBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = appColors(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final themeNotifier = Provider.of<ThemeNotifier>(context, listen: true);
+
+    return AppBar(
+      toolbarHeight: screenHeight * 0.12,
+      backgroundColor: colors.background,
+      title: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            _ProfileAvatar(screenWidth: screenWidth, colors: colors),
+            SizedBox(width: screenWidth * 0.04),
+            const _UserGreeting(),
+            const Spacer(),
+            IconButton(
+              onPressed: () => themeNotifier.toggleTheme(),
+              icon: Icon(
+                themeNotifier.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                color: colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  final double screenWidth;
+  final AppColors colors;
+
+  const _ProfileAvatar({
+    required this.screenWidth,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).pushNamed('/profile');
+      },
+      child: Container(
+        padding: EdgeInsets.all(screenWidth * 0.03),
+        decoration: BoxDecoration(
+          color: colors.green.withOpacity(0.2),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.person,
+          color: colors.green,
+          size: screenWidth * 0.055,
+        ),
+      ),
+    );
+  }
+}
+
+class _UserGreeting extends StatelessWidget {
+  const _UserGreeting();
+
+  String _getTimeBasedGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning!';
+    if (hour < 17) return 'Good Afternoon!';
+    return 'Good Evening!';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = appColors(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // TODO: Fetch user name from auth service when backend is ready
+    final userName = 'Rishabh'; // Placeholder
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hello $userName',
+          style: TextStyle(
+            color: colors.white,
+            fontSize: screenWidth * 0.042,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Text(
+          _getTimeBasedGreeting(),
+          style: TextStyle(
+            color: colors.green,
+            fontSize: screenWidth * 0.032,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderSection extends StatelessWidget {
+  const _HeaderSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = appColors(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Center(
+      child: Column(
+        children: [
+          Text(
+            'Scan-Go-Grow',
+            style: TextStyle(
+              color: colors.white,
+              fontSize: screenWidth * 0.06,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.1,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.005),
+          Text(
+            'Campus Exit',
+            style: TextStyle(
+              color: colors.green,
+              fontSize: screenWidth * 0.042,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionCardsSection extends StatelessWidget {
+  const _ActionCardsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final colors = appColors(context);
+
+    return Column(
+      children: [
+        _CompactActionCard(
+          icon: Icons.exit_to_app,
+          title: 'Exit',
+          onTap: () => _navigateToExit(context),
+          colors: colors,
+        ),
+        SizedBox(height: screenHeight * 0.02),
+        _CompactActionCard(
+          icon: Icons.login,
+          title: 'Enter',
+          onTap: () => _navigateToEnter(context),
+          colors: colors,
+        ),
+        SizedBox(height: screenHeight * 0.02),
+        _CompactActionCard(
+          icon: Icons.nightlight_round,
+          title: 'Night Pass',
+          onTap: () => _navigateToNightPass(context),
+          colors: colors,
+        ),
+      ],
     );
   }
 
-  void _showEnterDialog(BuildContext context) {
+  void _navigateToExit(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ExitFormHomePage()),
+    );
+  }
+
+  void _navigateToEnter(BuildContext context) {
+    // TODO: Get actual encrypted data from backend when implemented
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => QRCodeGenerator(encryptedData: ''),
+        builder: (context) => const QRCodeGenerator(qrData: ''),
       ),
     );
   }
 
-  void _showNightPassDialog(BuildContext context) {
+  void _navigateToNightPass(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => LeaveFormHomePage(title: '')),
+      MaterialPageRoute(
+          builder: (context) => const LeaveFormHomePage(title: '')),
     );
   }
 }
@@ -192,24 +253,20 @@ class HomePage extends StatelessWidget {
 class _CompactActionCard extends StatelessWidget {
   final IconData icon;
   final String title;
-  final Color accentColor;
-  final Color boxColor;
-  final Color textColor;
   final VoidCallback onTap;
-  final double screenWidth;
+  final AppColors colors;
 
   const _CompactActionCard({
     required this.icon,
     required this.title,
-    required this.accentColor,
     required this.onTap,
-    required this.screenWidth,
-    required this.boxColor,
-    required this.textColor,
+    required this.colors,
   });
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -219,11 +276,11 @@ class _CompactActionCard extends StatelessWidget {
           vertical: screenWidth * 0.04,
         ),
         decoration: BoxDecoration(
-          color: boxColor,
+          color: colors.box,
           borderRadius: BorderRadius.circular(screenWidth * 0.035),
           boxShadow: [
             BoxShadow(
-              color: accentColor.withOpacity(0.1),
+              color: colors.green.withOpacity(0.1),
               blurRadius: 8,
               spreadRadius: 1,
             )
@@ -234,12 +291,12 @@ class _CompactActionCard extends StatelessWidget {
             Container(
               padding: EdgeInsets.all(screenWidth * 0.03),
               decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.2),
+                color: colors.green.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
-                color: accentColor,
+                color: colors.green,
                 size: screenWidth * 0.055,
               ),
             ),
@@ -247,14 +304,14 @@ class _CompactActionCard extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                color: textColor,
+                color: colors.white,
                 fontSize: screenWidth * 0.042,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Spacer(),
+            const Spacer(),
             Icon(Icons.chevron_right,
-                color: accentColor, size: screenWidth * 0.05),
+                color: colors.green, size: screenWidth * 0.05),
           ],
         ),
       ),

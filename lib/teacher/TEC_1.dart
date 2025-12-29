@@ -2,30 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pravesh_screen/teacher/TEC_2.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class TeacherDashboardScreen extends StatefulWidget {
+  const TeacherDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Teacher Dashboard',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color.fromARGB(255, 52, 59, 72),
-        fontFamily: 'Inter',
-      ),
-      home: const TeacherDashboardScreen(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
+  State<TeacherDashboardScreen> createState() => _TeacherDashboardScreenState();
 }
 
-class TeacherDashboardScreen extends StatelessWidget {
-  const TeacherDashboardScreen({super.key});
+class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
+  bool _isLoading = true;
+
+  // Dynamic data variables
+  String teacherName = '';
+  String currentLocation = '';
+  int todaysClassesCount = 0;
+  int pendingVisitorsCount = 0;
 
   String get _greeting {
     final hour = DateTime.now().hour;
@@ -36,6 +27,50 @@ class TeacherDashboardScreen extends StatelessWidget {
 
   String get _currentTime {
     return DateFormat('hh:mm a').format(DateTime.now());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // TODO: API call - Fetch teacher profile
+      // final teacherProfile = await TeacherProfileAPI.fetch();
+      // teacherName = teacherProfile.name;
+      // currentLocation = teacherProfile.location;
+
+      // TODO: API call - Fetch dashboard stats
+      // final dashboardStats = await DashboardStatsAPI.fetch();
+      // todaysClassesCount = dashboardStats.todaysClassesCount;
+
+      // TODO: API call - Fetch pending visitor count
+      // final pendingVisitors = await PendingVisitorsAPI.fetch();
+      // pendingVisitorsCount = pendingVisitors.count;
+
+      // Set empty defaults for backend readiness
+      teacherName = '';
+      currentLocation = '';
+      todaysClassesCount = 0;
+      pendingVisitorsCount = 0;
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (error) {
+      // TODO: Show error banner / retry CTA when backend is connected
+      setState(() {
+        _isLoading = false;
+        teacherName = 'Teacher';
+        currentLocation = 'Location';
+      });
+    }
   }
 
   @override
@@ -70,8 +105,9 @@ class TeacherDashboardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hello Dr. Smith',
-                style: TextStyle(fontSize: screenWidth * 0.04, color: Colors.white70),
+                'Hello ${_isLoading ? 'Teacher' : (teacherName.isEmpty ? 'Teacher' : teacherName)}',
+                style: TextStyle(
+                    fontSize: screenWidth * 0.04, color: Colors.white70),
               ),
               Text(
                 _greeting,
@@ -97,8 +133,11 @@ class TeacherDashboardScreen extends StatelessWidget {
             ),
             SizedBox(height: screenWidth * 0.005),
             Text(
-              'Nagpur, Maharashtra',
-              style: TextStyle(fontSize: screenWidth * 0.03, color: Colors.white60),
+              _isLoading
+                  ? 'Loading...'
+                  : (currentLocation.isEmpty ? 'Location' : currentLocation),
+              style: TextStyle(
+                  fontSize: screenWidth * 0.03, color: Colors.white60),
             ),
           ],
         ),
@@ -116,7 +155,7 @@ class TeacherDashboardScreen extends StatelessWidget {
                 color: cardColor,
                 icon: Icons.people_alt_outlined,
                 label: "Today's Classes",
-                value: '4',
+                value: _isLoading ? '-' : todaysClassesCount.toString(),
                 iconColor: Colors.blue.shade300,
               ),
             ),
@@ -126,7 +165,7 @@ class TeacherDashboardScreen extends StatelessWidget {
                 color: cardColor,
                 icon: Icons.shield_outlined,
                 label: 'Pending Visitors',
-                value: '3',
+                value: _isLoading ? '-' : pendingVisitorsCount.toString(),
                 iconColor: Colors.orange.shade300,
               ),
             ),
@@ -154,13 +193,16 @@ class TeacherDashboardScreen extends StatelessWidget {
               ),
             ),
             Chip(
-              label: Text('3 Pending', style: TextStyle(fontSize: screenWidth * 0.03)),
+              label: Text(
+                _isLoading ? 'Pending' : '$pendingVisitorsCount Pending',
+                style: TextStyle(fontSize: screenWidth * 0.03),
+              ),
               labelStyle: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold),
+                  color: Colors.white, fontWeight: FontWeight.bold),
               backgroundColor: accentGreen,
               padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02),
-              labelPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
+              labelPadding:
+                  EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             )
           ],
@@ -168,7 +210,8 @@ class TeacherDashboardScreen extends StatelessWidget {
         SizedBox(height: screenWidth * 0.04),
         ElevatedButton.icon(
           icon: Icon(Icons.shield_outlined, size: screenWidth * 0.055),
-          label: Text('Manage Visitors', style: TextStyle(fontSize: screenWidth * 0.04)),
+          label: Text('Manage Visitors',
+              style: TextStyle(fontSize: screenWidth * 0.04)),
           onPressed: () {
             Navigator.push(
               context,
@@ -180,7 +223,8 @@ class TeacherDashboardScreen extends StatelessWidget {
             foregroundColor: Colors.white,
             backgroundColor: accentGreen,
             minimumSize: Size(double.infinity, screenWidth * 0.13),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             textStyle: const TextStyle(
                 fontWeight: FontWeight.w600, fontFamily: 'Inter'),
           ),
@@ -221,13 +265,16 @@ class _StatCard extends StatelessWidget {
           SizedBox(height: screenWidth * 0.03),
           Text(
             label,
-            style: TextStyle(fontSize: screenWidth * 0.035, color: Colors.white70),
+            style:
+                TextStyle(fontSize: screenWidth * 0.035, color: Colors.white70),
           ),
           SizedBox(height: screenWidth * 0.005),
           Text(
             value,
             style: TextStyle(
-                fontSize: screenWidth * 0.08, fontWeight: FontWeight.bold, color: Colors.white),
+                fontSize: screenWidth * 0.08,
+                fontWeight: FontWeight.bold,
+                color: Colors.white),
           ),
         ],
       ),

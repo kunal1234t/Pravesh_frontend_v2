@@ -2,24 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:pravesh_screen/initialInfo/intro_pages.dart';
 import 'package:pravesh_screen/widgets/herder_container.dart';
 import 'package:pravesh_screen/widgets/btn_name.dart';
-import 'package:pravesh_screen/warden/warden_home_screen.dart';
-import 'package:pravesh_screen/guard/new_visitor_managment.dart';
-import 'package:pravesh_screen/teacher/TEC_1.dart';
-
-
+import 'services/auth_service.dart';
+import 'auth_gate.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   String _errorMessage = '';
   bool _showError = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -28,43 +27,55 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _validateLogin() {
+  void _showLoginError(String message) {
+    setState(() {
+      _errorMessage = message;
+      _showError = true;
+    });
+
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showError = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _validateLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (email == 'a' && password == 'b') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => IntroPages()),
-      );
-    } else if (email == 'a' && password == 'c') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => WardenHomeScreen()),
-    );
-  }else if (email == 'a' && password == 'd') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => GuardDashboardScreen()),
-    );
-  } else if (email == 'a' && password == 'e') {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => TeacherDashboardScreen()),
-    );
-  }else {
-      setState(() {
-        _errorMessage = 'Wrong ID or Password. Please try again!';
-        _showError = true;
-      });
+    if (email.isEmpty || password.isEmpty) {
+      _showLoginError('Please enter ID and password');
+      return;
+    }
 
-      Future.delayed(Duration(seconds: 10), () {
-        if (mounted) {
-          setState(() {
-            _showError = false;
-          });
-        }
-      });
+    setState(() {
+      _showError = false;
+      _isLoading = true;
+    });
+
+    try {
+      // 🔐 Centralized auth + token storage + credential save
+      await AuthService.login(email, password);
+
+      // 🚪 Hand control back to AuthGate
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const IntroPages(),
+        ),
+        (_) => false,
+      );
+    } catch (e) {
+      _showLoginError('Invalid ID or Password');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -75,60 +86,58 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       body: Container(
-        color: Color(0xFFF5F5F5),
-        padding: EdgeInsets.only(
-            bottom: screenHeight * 0.035), // ~30px on 854px height
+        color: const Color(0xFFF5F5F5),
+        padding: EdgeInsets.only(bottom: screenHeight * 0.035),
         child: Column(
           children: <Widget>[
-            HeaderContainer(
-              text: '',
-            ),
+            const HeaderContainer(text: ''),
             Expanded(
-              flex: 1,
               child: Container(
                 margin: EdgeInsets.only(
-                  left: screenWidth * 0.053, // ~20px on 375px width
+                  left: screenWidth * 0.053,
                   right: screenWidth * 0.053,
-                  top: screenHeight * 0.035, // ~30px on 854px height
+                  top: screenHeight * 0.035,
                 ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.max,
                   children: <Widget>[
                     _textInput(
-                        controller: _emailController,
-                        hint: "CRISPR ID",
-                        icon: Icons.email),
+                      controller: _emailController,
+                      hint: "CRISPR ID",
+                      icon: Icons.email,
+                    ),
                     _textInput(
-                        controller: _passwordController,
-                        hint: "Password",
-                        icon: Icons.vpn_key,
-                        isPassword: true),
+                      controller: _passwordController,
+                      hint: "Password",
+                      icon: Icons.vpn_key,
+                      isPassword: true,
+                    ),
                     if (_showError)
                       Container(
                         width: double.infinity,
-                        margin:
-                            EdgeInsets.only(top: screenHeight * 0.012), // ~10px
-                        padding: EdgeInsets.all(screenWidth * 0.032), // ~12px
+                        margin: EdgeInsets.only(top: screenHeight * 0.012),
+                        padding: EdgeInsets.all(screenWidth * 0.032),
                         decoration: BoxDecoration(
                           color: Colors.red,
-                          borderRadius: BorderRadius.circular(
-                              screenWidth * 0.021), // ~8px
+                          borderRadius:
+                              BorderRadius.circular(screenWidth * 0.021),
                         ),
                         child: Text(
                           _errorMessage,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: screenWidth * 0.037, // ~14px
+                            fontSize: screenWidth * 0.037,
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ),
                     Expanded(
                       child: Center(
-                        child: ButtonWidget(
-                          onClick: _validateLogin,
-                          btnText: "LOGIN",
-                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator()
+                            : ButtonWidget(
+                                onClick: _validateLogin,
+                                btnText: "LOGIN",
+                              ),
                       ),
                     ),
                   ],
@@ -142,34 +151,32 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _textInput({
-    TextEditingController? controller,
-    String? hint,
-    IconData? icon,
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
     bool isPassword = false,
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
-      margin: EdgeInsets.only(top: screenHeight * 0.012), // ~10px
+      margin: EdgeInsets.only(top: screenHeight * 0.012),
       decoration: BoxDecoration(
-        borderRadius:
-            BorderRadius.all(Radius.circular(screenWidth * 0.053)), // ~20px
+        borderRadius: BorderRadius.all(Radius.circular(screenWidth * 0.053)),
         color: Colors.white,
       ),
-      padding: EdgeInsets.only(left: screenWidth * 0.027), // ~10px
+      padding: EdgeInsets.only(left: screenWidth * 0.027),
       child: TextFormField(
         controller: controller,
-        style: TextStyle(color: Colors.black),
         obscureText: isPassword,
         decoration: InputDecoration(
-          label: Text(hint!),
+          label: Text(hint),
           border: InputBorder.none,
           prefixIcon: Icon(icon),
           prefixIconColor: Colors.black,
           labelStyle: TextStyle(
             color: Colors.black,
-            fontSize: screenWidth * 0.04, // ~15px
+            fontSize: screenWidth * 0.04,
           ),
         ),
       ),

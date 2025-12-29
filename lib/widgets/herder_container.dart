@@ -11,8 +11,9 @@ class HeaderContainer extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final colors = appColors(context);
+
     return Container(
-      height: screenHeight * 0.4, // 40% of screen height
+      height: screenHeight * 0.4,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [colors.greenDark, colors.green],
@@ -20,26 +21,26 @@ class HeaderContainer extends StatelessWidget {
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(screenWidth * 0.2), // 20% of screen width
+          bottomLeft: Radius.circular(screenWidth * 0.2),
         ),
       ),
       child: Stack(
         children: <Widget>[
           Positioned(
-            bottom: screenHeight * 0.02, // 2% from bottom
-            right: screenWidth * 0.05, // 5% from right
+            bottom: screenHeight * 0.02,
+            right: screenWidth * 0.05,
             child: Text(
               text,
               style: TextStyle(
                 color: Colors.white,
-                fontSize: screenHeight * 0.025, // 2.5% of screen height
+                fontSize: screenHeight * 0.025,
               ),
             ),
           ),
           Center(
             child: SizedBox(
-              width: screenWidth * 0.4, // 40% of screen width
-              height: screenWidth * 0.4, // 40% of screen width (square logo)
+              width: screenWidth * 0.4,
+              height: screenWidth * 0.4,
               child: Image.asset("assets/icons/Logo.png"),
             ),
           ),
