@@ -96,6 +96,7 @@ class _ProfileAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
+        // CORRECT: Already using route-based navigation
         Navigator.of(context).pushNamed('/profile');
       },
       child: Container(
@@ -225,28 +226,18 @@ class _ActionCardsSection extends StatelessWidget {
   }
 
   void _navigateToExit(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ExitFormHomePage()),
-    );
+    // Route-based navigation for consistency
+    Navigator.pushNamed(context, '/exit-form');
   }
 
   void _navigateToEnter(BuildContext context) {
-    // TODO: Get actual encrypted data from backend when implemented
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const QRCodeGenerator(qrData: ''),
-      ),
-    );
+    // Route-based navigation for consistency
+    Navigator.pushNamed(context, '/qr-generator');
   }
 
   void _navigateToNightPass(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => const LeaveFormHomePage(title: '')),
-    );
+    // Route-based navigation for consistency
+    Navigator.pushNamed(context, '/leave-form');
   }
 }
 

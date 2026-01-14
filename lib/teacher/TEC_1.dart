@@ -213,11 +213,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           label: Text('Manage Visitors',
               style: TextStyle(fontSize: screenWidth * 0.04)),
           onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const VisitorRequestsScreen()),
-            );
+            Navigator.pushNamed(context, '/visitor-requests');
           },
           style: ElevatedButton.styleFrom(
             foregroundColor: Colors.white,

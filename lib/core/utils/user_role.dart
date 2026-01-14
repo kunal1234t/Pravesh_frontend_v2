@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pravesh_screen/login.dart';
 import 'package:pravesh_screen/widgets/navbar.dart';
 import 'package:pravesh_screen/services/auth_service.dart';
-import 'login.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});

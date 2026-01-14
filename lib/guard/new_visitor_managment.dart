@@ -4,8 +4,6 @@ import 'package:pravesh_screen/core/utils/responsive_helper.dart';
 import 'package:pravesh_screen/guard/visitor_photo.dart';
 import 'dart:async';
 
-import 'package:pravesh_screen/widgets/protected_route.dart';
-
 class GuardDashboardScreen extends StatefulWidget {
   const GuardDashboardScreen({super.key});
 
@@ -164,14 +162,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       label: Text('Register New Visitor',
           style: TextStyle(fontSize: screenWidth * 0.04)),
       onPressed: () {
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ProtectedRoute(
-                allowedRoles: const ['Guard'],
-                child: CaptureVisitorPhotoScreen(),
-              ),
-            ));
+        Navigator.pushNamed(context, '/visitor-photo');
       },
       style: ElevatedButton.styleFrom(
         foregroundColor: Colors.white,

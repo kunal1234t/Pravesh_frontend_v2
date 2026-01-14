@@ -249,12 +249,8 @@ class _WardenHomeScreenState extends State<WardenHomeScreen> {
                                   Size(double.infinity, screenHeight * 0.06),
                             ),
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const LateEntryRequestsScreen()),
-                              );
+                              Navigator.pushNamed(
+                                  context, '/late-entry-requests');
                             },
                             child: Text("Review Requests",
                                 style: TextStyle(fontSize: screenWidth * 0.04)),
@@ -275,11 +271,7 @@ class _WardenHomeScreenState extends State<WardenHomeScreen> {
                 icon: Icons.groups,
                 color: Colors.blue,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const StudentsOutsideScreen()),
-                  );
+                  Navigator.pushNamed(context, '/students-outside');
                 },
               ),
               SizedBox(height: screenHeight * 0.015),
@@ -291,11 +283,7 @@ class _WardenHomeScreenState extends State<WardenHomeScreen> {
                 icon: Icons.shield,
                 color: colors.green,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const MyGateVisitorsScreen()),
-                  );
+                  Navigator.pushNamed(context, '/my-gate');
                 },
               ),
             ],

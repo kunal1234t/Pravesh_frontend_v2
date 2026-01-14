@@ -3,9 +3,6 @@ import 'package:pravesh_screen/app_colors_provider.dart';
 import 'package:pravesh_screen/services/auth_service.dart';
 import 'package:pravesh_screen/widgets/color.dart';
 
-// Assuming AuthService is imported from your project
-import 'package:pravesh_screen/services/auth_service.dart';
-
 class StrapiUserResponse {
   final int id;
   final String username;
@@ -56,7 +53,6 @@ class StrapiRole {
 }
 
 class ViewProfileScreen extends StatefulWidget {
-  // Optional: You can pass an existing user if needed (for caching)
   final StrapiUserResponse? initialUser;
 
   const ViewProfileScreen({
@@ -79,7 +75,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
 
   Future<StrapiUserResponse> _fetchUserProfile() async {
     try {
-      // Call the existing AuthService.me() method
       final response = await AuthService.me();
       return StrapiUserResponse.fromJson(response);
     } catch (e) {
@@ -111,60 +106,12 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
     final colors = appColors(context);
 
-    return Scaffold(
-      backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: colors.background,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: FutureBuilder<StrapiUserResponse>(
-          future: _userFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Text(
-                'Profile',
-                style: TextStyle(
-                  color: colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: screenWidth * 0.055,
-                ),
-              );
-            } else if (snapshot.hasError) {
-              return Text(
-                'Profile',
-                style: TextStyle(
-                  color: colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: screenWidth * 0.055,
-                ),
-              );
-            } else if (snapshot.hasData) {
-              return Text(
-                _getProfileTitle(snapshot.data),
-                style: TextStyle(
-                  color: colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: screenWidth * 0.055,
-                ),
-              );
-            }
-            return Text(
-              'Profile',
-              style: TextStyle(
-                color: colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: screenWidth * 0.055,
-              ),
-            );
-          },
-        ),
-        centerTitle: true,
-      ),
-      body: SafeArea(
+    return Container(
+      color: colors.background,
+      child: SafeArea(
         child: FutureBuilder<StrapiUserResponse>(
           future: _userFuture,
           builder: (context, snapshot) {
-            // Loading State
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Center(
                 child: CircularProgressIndicator(
@@ -173,21 +120,31 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
               );
             }
 
-            // Error State
             if (snapshot.hasError) {
               return _buildErrorState(
-                  context, colors, screenWidth, screenHeight);
+                context,
+                colors,
+                screenWidth,
+                screenHeight,
+              );
             }
 
-            // Data Loaded State
             if (snapshot.hasData) {
-              final user = snapshot.data!;
               return _buildProfileContent(
-                  context, user, colors, screenWidth, screenHeight);
+                context,
+                snapshot.data!,
+                colors,
+                screenWidth,
+                screenHeight,
+              );
             }
 
-            // Empty State (should not happen with proper API)
-            return _buildErrorState(context, colors, screenWidth, screenHeight);
+            return _buildErrorState(
+              context,
+              colors,
+              screenWidth,
+              screenHeight,
+            );
           },
         ),
       ),
@@ -201,105 +158,129 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
     double screenWidth,
     double screenHeight,
   ) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.05,
-        vertical: screenHeight * 0.02,
-      ),
-      child: Column(
-        children: [
-          // Profile Picture
-          Center(
-            child: Container(
-              width: screenWidth * 0.3,
-              height: screenWidth * 0.3,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: colors.green,
-                  width: screenWidth * 0.01,
-                ),
-                image: const DecorationImage(
-                  image: AssetImage('assets/default_profile.png'),
-                  fit: BoxFit.cover,
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.05,
+            vertical: screenHeight * 0.02,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.person,
+                color: colors.white,
+                size: screenWidth * 0.06,
+              ),
+              SizedBox(width: screenWidth * 0.03),
+              Text(
+                _getProfileTitle(user),
+                style: TextStyle(
+                  color: colors.white,
+                  fontSize: screenWidth * 0.05,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth * 0.05,
+              vertical: screenHeight * 0.01,
             ),
-          ),
-          SizedBox(height: screenHeight * 0.04),
-
-          // Full Name
-          _buildDetailCard(
-            context: context,
-            icon: Icons.person_outline,
-            title: "Full Name",
-            value: user.username.isNotEmpty ? user.username : 'Not available',
-            screenWidth: screenWidth,
-          ),
-          SizedBox(height: screenHeight * 0.025),
-
-          // Email Address
-          _buildDetailCard(
-            context: context,
-            icon: Icons.email_outlined,
-            title: "Email Address",
-            value: user.email.isNotEmpty ? user.email : 'Not available',
-            screenWidth: screenWidth,
-          ),
-          SizedBox(height: screenHeight * 0.025),
-
-          // Role
-          _buildDetailCard(
-            context: context,
-            icon: Icons.work_outline,
-            title: "Role",
-            value: user.role.name.isNotEmpty ? user.role.name : 'Not available',
-            screenWidth: screenWidth,
-          ),
-          SizedBox(height: screenHeight * 0.025),
-
-          // User ID
-          _buildDetailCard(
-            context: context,
-            icon: Icons.badge_outlined,
-            title: "User ID",
-            value: user.id != 0 ? user.id.toString() : 'Not available',
-            screenWidth: screenWidth,
-          ),
-
-          // Optional Additional Fields
-          if (user.attributes != null &&
-              user.attributes!.containsKey('mobileNo'))
-            Column(
+            child: Column(
               children: [
+                Center(
+                  child: Container(
+                    width: screenWidth * 0.3,
+                    height: screenWidth * 0.3,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: colors.green,
+                        width: screenWidth * 0.01,
+                      ),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/default_profile.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: screenHeight * 0.04),
+                _buildDetailCard(
+                  context: context,
+                  icon: Icons.person_outline,
+                  title: "Full Name",
+                  value: user.username.isNotEmpty
+                      ? user.username
+                      : 'Not available',
+                  screenWidth: screenWidth,
+                ),
                 SizedBox(height: screenHeight * 0.025),
                 _buildDetailCard(
                   context: context,
-                  icon: Icons.phone_android_outlined,
-                  title: "Mobile Number",
-                  value: user.attributes!['mobileNo']?.toString() ??
-                      'Not available',
+                  icon: Icons.email_outlined,
+                  title: "Email Address",
+                  value: user.email.isNotEmpty ? user.email : 'Not available',
                   screenWidth: screenWidth,
                 ),
-              ],
-            ),
-
-          if (user.attributes != null && user.attributes!.containsKey('roomNo'))
-            Column(
-              children: [
                 SizedBox(height: screenHeight * 0.025),
                 _buildDetailCard(
                   context: context,
-                  icon: Icons.meeting_room_outlined,
-                  title: "Room Number",
-                  value:
-                      user.attributes!['roomNo']?.toString() ?? 'Not available',
+                  icon: Icons.work_outline,
+                  title: "Role",
+                  value: user.role.name.isNotEmpty
+                      ? user.role.name
+                      : 'Not available',
                   screenWidth: screenWidth,
                 ),
+                SizedBox(height: screenHeight * 0.025),
+                _buildDetailCard(
+                  context: context,
+                  icon: Icons.badge_outlined,
+                  title: "User ID",
+                  value: user.id != 0 ? user.id.toString() : 'Not available',
+                  screenWidth: screenWidth,
+                ),
+                if (user.attributes != null &&
+                    user.attributes!.containsKey('mobileNo'))
+                  Column(
+                    children: [
+                      SizedBox(height: screenHeight * 0.025),
+                      _buildDetailCard(
+                        context: context,
+                        icon: Icons.phone_android_outlined,
+                        title: "Mobile Number",
+                        value: user.attributes!['mobileNo']?.toString() ??
+                            'Not available',
+                        screenWidth: screenWidth,
+                      ),
+                    ],
+                  ),
+                if (user.attributes != null &&
+                    user.attributes!.containsKey('roomNo'))
+                  Column(
+                    children: [
+                      SizedBox(height: screenHeight * 0.025),
+                      _buildDetailCard(
+                        context: context,
+                        icon: Icons.meeting_room_outlined,
+                        title: "Room Number",
+                        value: user.attributes!['roomNo']?.toString() ??
+                            'Not available',
+                        screenWidth: screenWidth,
+                      ),
+                    ],
+                  ),
+                SizedBox(height: screenHeight * 0.05),
               ],
             ),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 
